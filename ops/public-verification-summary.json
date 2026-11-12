@@ -1,0 +1,33 @@
+{
+  "verified_on": "2026-11-12",
+  "timezone": "Asia/Seoul",
+  "public_url": "https://clinic-photo-demo.onrender.com",
+  "service_plan": "free",
+  "persistent_disk": false,
+  "source_commit": "fb6168cc05f6e3150551338d09a3e40fc8e078f0",
+  "automated_tests_passed": 52,
+  "public_https": {
+    "staff_button_login": true,
+    "csrf": true,
+    "patient_search": true,
+    "namesake_chart_distinction": true,
+    "qr_origin_and_visit": true,
+    "week3_upload_counts": [0, 3, 4],
+    "duplicate_retry_blocked": true,
+    "week1_and_week2_unchanged": true,
+    "same_instance_photo_ids_and_image_hashes_unchanged": true,
+    "anonymous_photo_access_blocked": true
+  },
+  "linux_heic_conversion": "verified_in_render_startup",
+  "redeploy": {
+    "deployment_id": "dep-dbqpqu9srm7s73dkh9rg",
+    "status": "live",
+    "sample_reset_verified": true,
+    "week1_count": 4,
+    "week2_count": 5,
+    "week3_count": 0
+  },
+  "manual_pc_live_refresh": "awaiting_user_confirmation",
+  "manual_iphone_safari": "awaiting_user_confirmation",
+  "limitations": "HTTP checks do not replace actual PC JavaScript execution or iPhone Safari use. Uploads are temporary and reset when the Free instance is replaced."
+}
