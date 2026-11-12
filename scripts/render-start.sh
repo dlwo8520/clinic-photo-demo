@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/render-env.sh"
-# Prepare the configured storage. Free demo uses /tmp with no attached disk.
+source "$(dirname "${BASH_SOURCE[0]}")/render-data.sh"
+# A new service start gets a fresh directory; Gunicorn worker recycling keeps it.
 python -m config.prepare_runtime
 python manage.py migrate --noinput
 python manage.py check --deploy --fail-level WARNING
-if [[ "${CLINIC_SEED_DEMO:-0}" == "1" ]]; then
-  python manage.py seed_demo
-fi
+python manage.py seed_demo
 # Verify this deployment's actual Linux codec, not only package installation.
 python manage.py check_heif
-# One SQLite writer process, two threads so polling can continue during upload.
+# One SQLite process, two threads so polling can continue during upload.
 # Omit access logs: request paths contain short-lived QR credentials.
 exec gunicorn config.wsgi:application \
   --bind "0.0.0.0:${PORT:-10000}" \

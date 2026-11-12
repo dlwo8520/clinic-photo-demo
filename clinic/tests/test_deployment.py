@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
 from unittest.mock import patch
@@ -24,7 +25,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SETTINGS_ENV_NAMES = (
     "DJANGO_DEBUG", "DJANGO_SECRET_KEY", "DJANGO_ALLOWED_HOSTS", "QR_BASE_URL",
     "CLINIC_DATA_DIR", "RENDER", "RENDER_EXTERNAL_HOSTNAME", "CLINIC_DEMO_PASSWORD",
-    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    "DJANGO_CSRF_TRUSTED_ORIGINS", "CLINIC_EPHEMERAL_DEMO", "CLINIC_MAX_IMAGE_PIXELS",
 )
 IMPORT_SETTINGS_SCRIPT = """
 import json
@@ -163,20 +164,21 @@ class DeploymentHealthTests(TestCase):
 
 
 class RuntimeStorageTests(SimpleTestCase):
-    def test_render_refuses_missing_mount_and_outside_mount_without_creating_storage(self):
+    def test_free_render_requires_explicit_ephemeral_mode(self):
         with tempfile.TemporaryDirectory() as temporary:
-            data_dir = (Path(temporary) / "persistent-data").resolve()
+            data_dir = (Path(temporary) / "free-data").resolve()
             media_dir = data_dir / "private_media"
-            with override_settings(DEBUG=False, ON_RENDER=True, DATA_DIR=data_dir, PRIVATE_MEDIA_ROOT=media_dir):
-                for mounted in [False, True]:
-                    with self.subTest(mounted=mounted):
-                        with patch("config.prepare_runtime.os.path.ismount", return_value=mounted):
-                            with self.assertRaises(SystemExit) as error:
-                                prepare_runtime.main()
-                        expected = "not mounted" if not mounted else "subdirectory"
-                        self.assertIn(expected, str(error.exception))
-                        self.assertFalse(data_dir.exists())
-                        self.assertFalse(media_dir.exists())
+            with override_settings(DEBUG=False, ON_RENDER=True, EPHEMERAL_DEMO=False,
+                                   DATA_DIR=data_dir, PRIVATE_MEDIA_ROOT=media_dir):
+                with self.assertRaisesMessage(SystemExit, "CLINIC_EPHEMERAL_DEMO=1"):
+                    prepare_runtime.main()
+            self.assertFalse(data_dir.exists())
+            with override_settings(DEBUG=False, ON_RENDER=True, EPHEMERAL_DEMO=True,
+                                   DATA_DIR=data_dir, PRIVATE_MEDIA_ROOT=media_dir):
+                with patch("config.prepare_runtime.os.path.ismount", side_effect=AssertionError("No persistent mount is used")):
+                    with redirect_stdout(StringIO()):
+                        prepare_runtime.main()
+            self.assertTrue(media_dir.is_dir())
 
     def test_generic_production_startup_creates_storage_and_can_repeat(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -189,6 +191,31 @@ class RuntimeStorageTests(SimpleTestCase):
             self.assertTrue(data_dir.is_dir())
             self.assertTrue(media_dir.is_dir())
             self.assertFalse((data_dir / "db.sqlite3").exists(), "Preparing storage must not create or migrate the database")
+
+    def test_each_service_start_selects_a_fresh_directory_without_deleting_current_uploads(self):
+        bash = shutil.which("bash")
+        if not bash:
+            self.skipTest("bash is required to verify the Render start script")
+        with tempfile.TemporaryDirectory() as temporary:
+            env = os.environ.copy()
+            env.update(CLINIC_EPHEMERAL_DEMO="1", TMPDIR=Path(temporary).as_posix())
+            script = (PROJECT_ROOT / "scripts" / "render-data.sh").as_posix()
+            def start_directory():
+                result = subprocess.run([bash, "-c", 'source "$1"; printf "%s" "$CLINIC_DATA_DIR"',
+                                         "render-start-test", script], env=env, capture_output=True,
+                                        text=True, timeout=10, check=True)
+                value = result.stdout.strip()
+                if os.name == "nt" and len(value) > 3 and value[0] == "/" and value[2] == "/":
+                    value = value[1] + ":" + value[2:]
+                return Path(value).resolve()
+            first = start_directory()
+            marker = first / "uploaded-photo.jpg"
+            marker.write_bytes(b"current run upload")
+            second = start_directory()
+            self.assertNotEqual(first, second)
+            self.assertTrue(second.is_dir())
+            self.assertEqual(marker.read_bytes(), b"current run upload")
+            self.assertEqual(list(second.iterdir()), [])
 
 
 class ProductionSeedTests(TestCase):

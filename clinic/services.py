@@ -1,5 +1,6 @@
 import os
 import tempfile
+import threading
 import uuid
 from pathlib import Path
 from django.conf import settings
@@ -7,6 +8,10 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from .images import ImageValidationError, process_image
 from .models import Photo
+
+# The Free service has limited RAM. Decode one image at a time while the other
+# Gunicorn thread continues to serve patient searches and photo-list polling.
+_image_processing_lock = threading.Lock()
 
 
 def private_path(key):
@@ -33,7 +38,8 @@ def store_photo(*, visit, uploaded_file, created_by, client_id, upload_session=N
         return existing, False
     if len(body_site) > 40:
         raise ImageValidationError("촬영 부위는 40자 이내로 입력해 주세요.")
-    image = process_image(uploaded_file)
+    with _image_processing_lock:
+        image = process_image(uploaded_file)
     identifier = uuid.uuid4().hex
     keys = {"original_key": f"originals/{identifier}.bin", "file_key": f"images/{identifier}.jpg", "thumbnail_key": f"thumbs/{identifier}.jpg"}
     temporary_paths, published_paths = [], []

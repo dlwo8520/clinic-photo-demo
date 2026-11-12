@@ -5,18 +5,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>{% block title %}진료 사진{% endblock %} · 온담</title>
+  <title>{% block title %}진료 사진{% endblock %} · 굿모나 의원</title>
   <link rel="stylesheet" href="{% static 'clinic/app.css' %}">
   {% block head %}{% endblock %}
 </head>
 <body>
   <header class="app-header">
-    <a class="brand" href="/patients/" aria-label="온담 진료 사진 홈"><span class="brand-symbol" aria-hidden="true">＋</span><span>온담 <span class="brand-sub">진료 사진</span></span></a>
+    <a class="brand" href="/patients/" aria-label="굿모나 의원 진료 사진 홈"><span class="brand-symbol" aria-hidden="true">＋</span><span>굿모나 의원 <span class="brand-sub">진료 사진</span></span></a>
     <div class="header-right"><span class="demo-label">가상 데이터 · 면접 과제 프로토타입</span>{% if user.is_authenticated %}<form method="post" action="/logout/">{% csrf_token %}<button class="text-button" type="submit">로그아웃</button></form>{% endif %}</div>
   </header>
   {% if messages %}<div class="messages" role="status">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
   {% block content %}{% endblock %}
-  <footer class="app-footer">가상의 환자와 시연용 사진을 사용합니다. 실제 진료 자료가 아닙니다.<br>무료 면접 데모: 새로고침 시 사진은 유지되며, 서버 재시작·재배포·절전 후에는 기본 샘플로 돌아갈 수 있습니다.</footer>
+  <footer class="app-footer">가상의 환자와 시연용 사진을 사용합니다. 실제 진료 자료가 아닙니다.</footer>
   {% block scripts %}{% endblock %}
 </body>
 </html>

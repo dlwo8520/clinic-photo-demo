@@ -1,4 +1,4 @@
-# Free interview demo: no paid service and no persistent disk.
+# Free interview demo: one web service, temporary SQLite and photo storage.
 services:
   - type: web
     name: clinic-photo-demo
@@ -15,14 +15,18 @@ services:
       - key: DJANGO_DEBUG
         value: "0"
       - key: CLINIC_DATA_DIR
-        value: /tmp/clinic-photo-demo
+        value: /tmp/goodmona-demo
+      - key: CLINIC_EPHEMERAL_DEMO
+        value: "1"
       - key: CLINIC_STORAGE_MODE
         value: ephemeral
       - key: CLINIC_DEMO_LOGIN
-        value: "1"
-      - key: CLINIC_SEED_DEMO
-        value: "1"
+        value: "0"
+      - key: CLINIC_MAX_IMAGE_PIXELS
+        value: "16000000"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       # Build/start export the actual RENDER_EXTERNAL_URL and hostname as
       # QR_BASE_URL and DJANGO_ALLOWED_HOSTS. No localhost fallback in production.
+      - key: CLINIC_DEMO_PASSWORD
+        sync: false

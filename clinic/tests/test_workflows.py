@@ -317,6 +317,22 @@ class PhotoWorkflowTests(TestCase):
         self.assertEqual(invalid.json()["results"][0]["status"], "error")
         self.assertEqual(Photo.objects.count(), 1)
 
+    @override_settings(MAX_IMAGE_PIXELS=10000)
+    def test_free_plan_resolution_limit_is_enforced_before_storage(self):
+        token, _ = self.make_session()
+        result = self.upload(token, [image_file(size=(128, 128))]).json()["results"][0]
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(Photo.objects.count(), 0)
+        self.assertIn("1만", result["error"])
+
+    @override_settings(DISPLAY_MAX_SIDE=128)
+    def test_display_image_is_scaled_without_cropping_its_aspect_ratio(self):
+        token, _ = self.make_session()
+        result = self.upload(token, [image_file(size=(256, 192))]).json()["results"][0]
+        self.assertEqual(result["status"], "saved")
+        with Image.open(BytesIO(response_bytes(self.client.get(result["photo"]["url"])))) as image:
+            self.assertEqual(image.size, (128, 96))
+
     def test_size_and_resolution_limits_reject_invalid_images(self):
         token, _ = self.make_session()
         for invalid in [
@@ -376,6 +392,23 @@ class PhotoWorkflowTests(TestCase):
 
 
 class DemoSeedTests(TestCase):
+    @override_settings(DEBUG=True)
+    @patch.dict("os.environ", {"CLINIC_DEMO_PASSWORD": "local-seed-test-password"})
+    def test_reseeding_preserves_an_uploaded_week_three_photo(self):
+        from clinic.services import store_photo, private_path
+        with tempfile.TemporaryDirectory() as root, override_settings(PRIVATE_MEDIA_ROOT=Path(root)):
+            call_command("seed_demo", verbosity=0)
+            visit = Visit.objects.get(patient__chart_number="DEMO-1001", week=3)
+            user = get_user_model().objects.get(username="dlwo8520")
+            photo, _ = store_photo(visit=visit, uploaded_file=image_file(), created_by=user,
+                                   client_id=uuid.uuid4(), body_site="정수리")
+            original_bytes = private_path(photo.file_key).read_bytes()
+            counts = (Patient.objects.count(), Visit.objects.count(), Photo.objects.count())
+            call_command("seed_demo", verbosity=0)
+            self.assertEqual(counts, (Patient.objects.count(), Visit.objects.count(), Photo.objects.count()))
+            self.assertEqual(visit.photos.get().pk, photo.pk)
+            self.assertEqual(private_path(photo.file_key).read_bytes(), original_bytes)
+
     @override_settings(DEBUG=True)
     @patch.dict("os.environ", {"CLINIC_DEMO_PASSWORD": "local-seed-test-password"})
     def test_seed_is_offline_idempotent_and_has_required_visits(self):

@@ -1,4 +1,4 @@
-"""Prepare explicit local, free-demo or persistent storage without deleting data."""
+"""Prepare the temporary data directory selected for this service start."""
 import os
 import tempfile
 from pathlib import Path
@@ -10,19 +10,15 @@ def main():
     if settings.DEBUG:
         raise SystemExit("Production startup requires DJANGO_DEBUG=0")
     data_dir = settings.DATA_DIR.resolve()
-    if settings.STORAGE_MODE == "ephemeral":
+    if settings.ON_RENDER:
+        if not (settings.EPHEMERAL_DEMO or settings.STORAGE_MODE == "ephemeral"):
+            raise SystemExit("The Free interview deployment requires CLINIC_EPHEMERAL_DEMO=1")
         temporary_root = Path(tempfile.gettempdir()).resolve()
         if not data_dir.is_relative_to(temporary_root) or data_dir == temporary_root:
-            raise SystemExit("Ephemeral CLINIC_DATA_DIR must be a dedicated subdirectory of the OS temporary directory")
-    elif settings.ON_RENDER:
-        mount = Path("/var/data")
-        if not os.path.ismount(mount):
-            raise SystemExit("Persistent disk /var/data is not mounted. Refusing to create an ephemeral database.")
-        if not data_dir.is_relative_to(mount) or data_dir == mount:
-            raise SystemExit("CLINIC_DATA_DIR must be a subdirectory of persistent mount /var/data")
+            raise SystemExit("The Free demo data directory must be inside the server temporary directory")
     data_dir.mkdir(parents=True, exist_ok=True)
     Path(settings.PRIVATE_MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
-    print(f"{settings.STORAGE_MODE} data directory is ready; migrations may now run.")
+    print("Demo data directory is ready; migrations may now run.")
 
 
 if __name__ == "__main__":

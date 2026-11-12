@@ -138,4 +138,4 @@ class Command(BaseCommand):
         self.stdout.write("대표 환자: 1주차 4장 · 2주차 5장 · 3주차 초기 0장")
         self.stdout.write("데모 계정: dlwo8520 / 기존 계정의 비밀번호는 유지됩니다.")
         if created:
-            self.stdout.write("데모 계정을 준비했습니다. 비밀번호 값은 출력하지 않습니다.")
+            self.stdout.write("입력한 비밀번호로 계정을 만들었습니다. 값은 출력하지 않습니다.")

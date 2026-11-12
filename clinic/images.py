@@ -51,14 +51,13 @@ def process_image(uploaded_file):
                 if source.format not in {"JPEG", "PNG", "HEIF", "HEIC"}:
                     raise ImageValidationError("JPEG, PNG, HEIC/HEIF 사진만 지원합니다.")
                 w, h = source.size
-                if min(w, h) < MIN_SIDE or max(w, h) > MAX_SIDE or w * h > MAX_PIXELS:
-                    raise ImageValidationError("해상도는 가로·세로 64px 이상, 각 변 12,000px 이하, 총 4천만 화소 이하여야 합니다.")
-                # Preserve original bytes, but bound display buffers for the 512MB demo.
-                # JPEG draft decoding also avoids decoding the full camera resolution.
-                source.draft("RGB", (2400, 2400))
-                source.thumbnail((2400, 2400), Image.Resampling.LANCZOS)
+                if min(w, h) < MIN_SIDE or max(w, h) > MAX_SIDE or w * h > settings.MAX_IMAGE_PIXELS:
+                    raise ImageValidationError(f"해상도는 가로·세로 64px 이상, 각 변 12,000px 이하, 총 {settings.MAX_IMAGE_PIXELS // 10000:,}만 화소 이하여야 합니다. 사진 크기를 줄이거나 아이폰의 12MP 사진을 선택해 주세요.")
+                source.draft("RGB", (settings.DISPLAY_MAX_SIDE, settings.DISPLAY_MAX_SIDE))
                 source.load()  # Decode fully before accepting (not just file suffix or header).
-                oriented = ImageOps.exif_transpose(source)
+                ImageOps.exif_transpose(source, in_place=True)
+                source.thumbnail((settings.DISPLAY_MAX_SIDE, settings.DISPLAY_MAX_SIDE), Image.Resampling.LANCZOS)
+                oriented = source
                 # A fresh RGB canvas strips EXIF/GPS, XMP, comments and other metadata.
                 if oriented.mode in {"RGBA", "LA"} or "transparency" in oriented.info:
                     rgba = oriented.convert("RGBA")
@@ -77,7 +76,7 @@ def process_image(uploaded_file):
     except ImageValidationError:
         raise
     except (Image.DecompressionBombError, Image.DecompressionBombWarning):
-        raise ImageValidationError("이미지 해상도가 너무 큽니다. 4천만 화소 이하로 줄여 주세요.") from None
+        raise ImageValidationError(f"이미지 해상도가 너무 큽니다. {settings.MAX_IMAGE_PIXELS // 10000:,}만 화소 이하로 줄여 주세요.") from None
     except (UnidentifiedImageError, OSError, ValueError, SyntaxError, EOFError):
         reason = "HEIC/HEIF를 읽을 수 없습니다. 손상 여부를 확인하거나 JPEG로 변환해 주세요." if looks_heif else "올바른 이미지가 아니거나 파일이 손상되었습니다. JPEG 또는 PNG 사진을 선택해 주세요."
         raise ImageValidationError(reason) from None

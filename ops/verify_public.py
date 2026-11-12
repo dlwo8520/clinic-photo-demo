@@ -209,8 +209,9 @@ class Client:
         payload = urllib.parse.urlencode(fields).encode("utf-8")
         status, body, _ = self.request("/login/", method="POST", body=payload,
                                        content_type="application/x-www-form-urlencoded")
-        require(status == 200 and not parse_html(body).has_password and not parse_html(body).has_demo,
-                "Staff login failed. Check the demo account and authentication mode.")
+        returned_page = parse_html(body)
+        require(status == 200 and not returned_page.has_password and not returned_page.has_demo,
+                "Staff login failed. Check the username and password.")
 
 
 def image_bytes(index):
@@ -382,23 +383,23 @@ def check_upload(client, selected):
             "qr_image_sha256": hashlib.sha256(qr_bytes).hexdigest()}
 
 
-def restart_check(client, previous):
+def refresh_check(client, previous):
     require(previous.get("schema_version") == 1 and previous.get("visits"), "Unsupported or empty evidence file.")
     require(origin(previous.get("base_url", "")) == origin(client.base_url),
-            "Restart evidence belongs to another server origin.")
+            "Refresh evidence belongs to another server origin.")
     verified = []
     for visit in previous["visits"]:
         current = {photo["id"]: photo for photo in photo_list(client, visit["id"])}
         for stored in visit["photos"]:
-            require(stored["id"] in current, "A previously recorded photo is missing after restart.")
+            require(stored["id"] in current, "A previously recorded photo is missing after refresh.")
             actual = photo_snapshot(client, current[stored["id"]])
             require(actual["sha256"] == stored["sha256"] and
                     actual["thumbnail_sha256"] == stored["thumbnail_sha256"],
-                    "A previously recorded image or thumbnail changed after restart.")
+                    "A previously recorded image or thumbnail changed after refresh.")
             verified.append(stored["id"])
     return {"verified_at": timestamp(), "photo_ids": verified,
             "photo_and_thumbnail_sha256_unchanged": True,
-            "limitation": "HTTP evidence confirms persistence; the script cannot itself prove that a restart occurred."}
+            "limitation": "HTTP evidence confirms retrieval within the current service run; the script does not execute browser JavaScript."}
 
 
 def arguments():
@@ -408,13 +409,13 @@ def arguments():
     parser.add_argument("--patient-chart", default="DEMO-1001")
     parser.add_argument("--namesake-query", default="김하")
     parser.add_argument("--upload", action="store_true", help="Explicitly add fictional photos (3 then 1) to the representative week-3 visit")
-    parser.add_argument("--check-restart", type=Path, metavar="EVIDENCE_JSON", help="Verify stored IDs/hashes in the same active instance (not a Free instance restart)")
-    parser.add_argument("--check-reset", action="store_true", help="After a Free instance replacement, verify week 1=4, week 2=5, week 3=0")
+    parser.add_argument("--check-refresh", type=Path, metavar="EVIDENCE_JSON", help="Re-login and re-read previously recorded photo IDs and hashes in the same service run")
+    parser.add_argument("--check-reseed", action="store_true", help="After a Free service restart, verify fresh sample visit counts of 4, 5 and 0")
     parser.add_argument("--output", type=Path, default=Path("artifacts/public-verification.json"))
     parser.add_argument("--allow-local", action="store_true", help="Allow HTTP only on localhost/127.0.0.1/::1 for local QA")
     args = parser.parse_args()
-    require(not (args.upload and args.check_restart), "Use --upload and --check-restart as separate runs.")
-    require(not (args.check_reset and (args.upload or args.check_restart)), "Use --check-reset separately.")
+    require(sum(bool(value) for value in (args.upload, args.check_refresh, args.check_reseed)) <= 1,
+            "Use --upload, --check-refresh and --check-reseed as separate runs.")
     args.base_url = validate_base_url(args.base_url, args.allow_local)
     return args
 
@@ -426,16 +427,16 @@ def main():
         client = Client(args.base_url)
         client.login(args.username, password)
         del password
-        if args.check_restart:
-            previous = json.loads(args.check_restart.read_text(encoding="utf-8"))
+        if args.check_refresh:
+            previous = json.loads(args.check_refresh.read_text(encoding="utf-8"))
             evidence = dict(previous)
-            evidence["restart_verification"] = restart_check(client, previous)
+            evidence["refresh_verification"] = refresh_check(client, previous)
         else:
             patient, selected = check_initial(client, args)
-            if args.check_reset:
-                for week, expected in ((1, 4), (2, 5), (3, 0)):
-                    require(len(photo_list(client, selected[week]["id"])) == expected,
-                            f"Free demo week {week} did not reset to {expected} sample photos.")
+            if args.check_reseed:
+                for week, count in ((1, 4), (2, 5), (3, 0)):
+                    require(len(photo_list(client, selected[week]["id"])) == count,
+                            f"Fresh week {week} did not contain exactly {count} sample photos.")
             original_visits = [visit_snapshot(client, selected[week]) for week in (1, 2)]
             upload = check_upload(client, selected) if args.upload else {"performed": False}
             if args.upload:
@@ -450,19 +451,21 @@ def main():
                                    "week1_at_least_four": True, "week2_at_least_five": True,
                                    "authenticated_photo_and_thumbnail": True,
                                    "anonymous_photo_and_thumbnail_blocked": True},
+                        "fresh_samples_verified": bool(args.check_reseed),
                         "upload": upload,
-                        "free_sample_reset_verified": args.check_reset,
                         "visits": original_visits + [visit_snapshot(client, selected[3])],
                         "manual_checks_required": [
                             "PC browser: select week 3, upload from another session, confirm thumbnails/count and last large photo update without page reload.",
                             "iPhone Safari: scan QR, log in and return to this visit, test camera and multiple library selection, preview/removal and partial retry.",
-                            "Same active server: use --check-restart to re-fetch stored hashes; after Free instance replacement use --check-reset for baseline samples.",
+                            "Browser: refresh and confirm the same uploaded visit photos. Free restart: run --check-reseed to confirm samples reset to 4, 5 and 0.",
                         ]}
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"PASS: HTTP acceptance evidence written to {args.output}")
-        if args.check_restart:
+        if args.check_refresh:
             print("Previously recorded photo IDs and image/thumbnail SHA-256 values remain available.")
+        elif args.check_reseed:
+            print("Fresh Free demo samples verified: week 1 = 4, week 2 = 5, week 3 = 0.")
         elif args.upload:
             upload = evidence["upload"]
             print(f'Week 3: {upload["baseline_count"]} -> {upload["after_three_count"]} -> {upload["after_four_count"]} photos; request replay did not duplicate.')

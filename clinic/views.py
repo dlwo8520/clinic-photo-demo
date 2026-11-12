@@ -136,7 +136,8 @@ def upload_page(request, token):
     if not session or session.is_expired:
         return render(request, "clinic/upload_invalid.html", {"reason": "QR 만료" if session else "유효하지 않은 QR", "detail": "PC에서 새 QR을 생성한 뒤 다시 열어 주세요."}, status=410)
     return render(request, "clinic/upload.html", {"patient": session.visit.patient, "visit": session.visit, "token": token,
-                                                "expires_at": session.expires_at, "heif_supported": HEIF_SUPPORTED})
+                                                "expires_at": session.expires_at, "heif_supported": HEIF_SUPPORTED,
+                                                "max_image_megapixels": settings.MAX_IMAGE_PIXELS // 1000000})
 
 
 @staff_required
