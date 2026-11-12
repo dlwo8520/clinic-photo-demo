@@ -2,7 +2,9 @@
 
 Django와 SQLite로 만든 가상 진료 사진 앱입니다. 직원 인트라넷 과제 2와 프로젝트·DB·배포 서비스를 분리합니다. 모든 환자와 샘플 사진은 가상입니다.
 
-**배포 상태:** 무료 Render 배포를 준비했습니다. 공개 주소와 실제 검증 결과는 배포가 성공한 후 기록합니다.
+**공개 HTTPS 주소: https://clinic-photo-demo.onrender.com/**
+
+Render Free Web Service 배포와 실제 HTTPS 직원 접속·검색·QR·사진 3장+1장 업로드를 확인했습니다. 유료 서비스와 영구 디스크는 사용하지 않습니다. 접속 후 **직원으로 접속**을 누르세요. PC 자동 갱신과 아이폰 Safari 실기기 확인은 아래 자동 검증 결과와 구분합니다.
 
 ## 무료 배포 조건
 
@@ -45,7 +47,7 @@ Django와 SQLite로 만든 가상 진료 사진 앱입니다. 직원 인트라�
 | Branch | `main` |
 | Build | `bash scripts/render-build.sh` |
 | Start | `bash scripts/render-start.sh` |
-| Health | `/healthz/` |
+| 상태 확인 URL | `/healthz/` · MCP 생성 서비스는 기본 TCP 상태 검사 사용 |
 | Persistent disk | **없음** |
 | SQLite | `/tmp/clinic-photo-demo/db.sqlite3` |
 | Photos | `/tmp/clinic-photo-demo/private_media` |
@@ -103,3 +105,22 @@ PC는 현재 오른쪽 방문의 사진 목록을 약 2초마다 조회합니다
 같은 실행 인스턴스에서 사진 ID·파일 해시를 다시 확인하려면 `--check-restart artifacts/public-verification.json`을 사용합니다. 옵션 이름은 기존 호환용이며 Free 서버가 실제로 재시작되어도 업로드가 남는다는 뜻이 아닙니다. Free 서버 재배포 후에는 **`--check-reset`**으로 기본 4장·5장·0장 복원을 검사합니다. 검증 스크립트가 재시작을 수행하지는 않습니다.
 
 HTTP 검증은 PC JavaScript 실행과 실제 아이폰 Safari의 QR 스캔·사진 보관함·카메라 조작을 대신하지 않습니다. 자동 검증과 실기기 검증 결과를 구분해서 기록합니다.
+
+## 실제 확인 결과 · 2026-11-12
+
+| 항목 | 결과 |
+| --- | --- |
+| Render 서비스 | `clinic-photo-demo` · Singapore · **Free** · 영구 디스크 없음 |
+| HTTPS 실제 접속 | 직원 버튼 접속·CSRF·환자 검색·동명이인 차트 구분 통과 |
+| 사진 업로드 | 공개 HTTPS에서 3주차 **0 → 3 → 4장**, 요청 재전송 중복 차단 통과 |
+| QR | 공개 HTTPS 원점과 방문 연결, QR 이미지·업로드 경로 통과 |
+| 사진 재조회 | 같은 서버에서 사진 ID, 화면용 이미지·썸네일 SHA-256 유지 확인 |
+| 기존 샘플 보존 | 3주차 업로드 후 1주차 4장·2주차 5장 변경 없음 |
+| 자동 테스트 | **52개 통과** |
+| Linux HEIC | 실제 Render 시작 로그에서 HEIC → JPEG·썸네일 변환 확인 |
+| Free 재배포 샘플 복원 | 같은 커밋을 재배포한 새 인스턴스에서 **4장·5장·0장** 자동 복원 통과 |
+| PC 자동 갱신·실제 아이폰 Safari | 브라우저 제어 연결과 실기기 접근이 없어 사용자 확인 대기 |
+
+실제 HTTP 증거 JSON은 로컬 `artifacts/public-verification.json`과 `artifacts/refetch-verification.json`에 저장했습니다. 이 파일은 저장소에 올리지 않으며 비밀번호와 QR 토큰을 포함하지 않습니다.
+
+재배포 후 기본 샘플 복원 증거는 `artifacts/reset-verification.json`에 저장했습니다. 공개 요약은 [검증 요약](ops/public-verification-summary.json)에 있습니다. 재배포 검증은 실제로 수행했으며 단순 브라우저 새로고침 결과와 구분합니다.
