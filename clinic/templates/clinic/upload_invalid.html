@@ -1,0 +1,3 @@
+{% extends 'clinic/base.html' %}
+{% block title %}QR 확인{% endblock %}
+{% block content %}<main class="mobile-upload"><div class="eyebrow">UPLOAD LINK</div><div class="notice error"><h1>QR을 사용할 수 없습니다</h1><p>{{ reason }}</p></div><p class="muted">PC에서 대상 환자와 방문을 확인하고 <strong>아이폰으로 사진 추가</strong>를 눌러 새 QR을 만들어 주세요.</p><a class="button secondary full" href="/patients/">환자 목록으로 이동</a></main>{% endblock %}

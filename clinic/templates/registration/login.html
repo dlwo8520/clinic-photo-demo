@@ -1,0 +1,20 @@
+{% extends 'clinic/base.html' %}
+{% block title %}직원 로그인{% endblock %}
+{% block content %}
+<main class="login-wrap">
+  <div class="eyebrow">STAFF ACCESS</div>
+  <h1>진료 사진을 한눈에</h1>
+  <p class="muted login-intro">환자를 찾고, 방문별 사진을 나란히 비교하세요.</p>
+  <form method="post" class="login-form">
+    {% csrf_token %}
+    {% if form.errors %}<div class="notice error" role="alert">아이디 또는 비밀번호를 확인해 주세요. 직원 계정으로 로그인해야 합니다.</div>{% endif %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="id_username">직원 아이디</label>
+    <input id="id_username" name="username" type="text" autocomplete="username" required autofocus>
+    <label for="id_password">비밀번호</label>
+    <input id="id_password" name="password" type="password" autocomplete="current-password" required>
+    <button class="button primary full" type="submit">로그인</button>
+  </form>
+  <p class="fine-print">아이폰 QR로 접속했다면 로그인 후 해당 방문의 업로드 화면으로 돌아갑니다.</p>
+</main>
+{% endblock %}

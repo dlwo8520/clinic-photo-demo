@@ -1,0 +1,17 @@
+{% extends 'clinic/base.html' %}
+{% block title %}환자 찾기{% endblock %}
+{% block content %}
+<main class="page patient-page">
+  <div class="page-heading"><div><div class="eyebrow">PATIENTS</div><h1>환자 찾기</h1><p class="muted">이름 일부 또는 가상 차트번호로 검색하세요.</p></div><span class="pill">DEMO</span></div>
+  <form class="search-form" method="get" action="/patients/" role="search">
+    <label class="sr-only" for="patient-search">환자 이름 또는 차트번호</label>
+    <span class="search-icon" aria-hidden="true">⌕</span><input id="patient-search" name="q" value="{{ q }}" placeholder="환자 이름 또는 차트번호" autocomplete="off" autofocus><button type="submit" class="button primary">검색</button>
+  </form>
+  <div class="section-caption"><h2>{% if q %}검색 결과{% else %}가상 환자 목록{% endif %}</h2><span class="muted">{{ patients|length }}명</span></div>
+  <div class="patient-table-wrap">
+    <table class="patient-table"><thead><tr><th>환자 이름</th><th>차트번호</th><th>최근 방문일</th><th>저장된 방문</th><th><span class="sr-only">사진 조회</span></th></tr></thead>
+    <tbody>{% for patient in patients %}<tr><td><a class="patient-name" href="/patients/{{ patient.id }}/">{{ patient.name }}</a></td><td class="chart-number">{{ patient.chart_number }}</td><td>{% if patient.last_visit %}{{ patient.last_visit|date:"Y.m.d" }}{% else %}<span class="muted">방문 없음</span>{% endif %}</td><td>{{ patient.visit_count }}회</td><td><a class="row-link" href="/patients/{{ patient.id }}/">사진 비교 <span aria-hidden="true">↗</span></a></td></tr>{% empty %}<tr><td colspan="5"><div class="empty-list"><strong>검색 결과가 없습니다</strong><p>이름 일부나 차트번호를 다시 확인해 주세요.</p><a href="/patients/">전체 환자 보기</a></div></td></tr>{% endfor %}</tbody></table>
+  </div>
+  <p class="fine-print">동명이인은 차트번호로 구분할 수 있습니다. 환자를 선택하면 방문별 사진이 열립니다.</p>
+</main>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% load static %}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}진료 사진{% endblock %} · 온담</title>
+  <link rel="stylesheet" href="{% static 'clinic/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/patients/" aria-label="온담 진료 사진 홈"><span class="brand-symbol" aria-hidden="true">＋</span><span>온담 <span class="brand-sub">진료 사진</span></span></a>
+    <div class="header-right"><span class="demo-label">가상 데이터 · 면접 과제 프로토타입</span>{% if user.is_authenticated %}<form method="post" action="/logout/">{% csrf_token %}<button class="text-button" type="submit">로그아웃</button></form>{% endif %}</div>
+  </header>
+  {% if messages %}<div class="messages" role="status">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
+  {% block content %}{% endblock %}
+  <footer class="app-footer">가상의 환자와 시연용 사진을 사용합니다. 실제 진료 자료가 아닙니다.</footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

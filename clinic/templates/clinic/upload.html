@@ -1,0 +1,22 @@
+{% extends 'clinic/base.html' %}
+{% load static %}
+{% block title %}사진 업로드{% endblock %}
+{% block content %}
+<main class="mobile-upload" id="upload-app" data-token="{{ token }}" data-expires="{{ expires_at|date:'c' }}">
+  <div class="eyebrow">PHOTO UPLOAD</div><h1>이 방문에 사진 추가</h1>
+  <section class="upload-patient-card" aria-label="사진 저장 대상"><div class="upload-patient-name">{{ patient.name }} <span class="chart-number">{{ patient.chart_number }}</span></div><strong>{{ visit.week }}주차 · {{ visit.visited_on|date:"Y년 n월 j일" }}</strong><p class="muted">위 환자와 방문을 확인한 뒤 사진을 선택해 주세요.</p></section>
+  <div class="expiry-note" id="mobile-expiry" role="status">QR 유효 시간 확인 중</div>
+  <div id="upload-message" class="notice" role="status" hidden></div>
+  <form id="upload-form">{% csrf_token %}
+    <div class="file-actions"><label class="button primary camera-button" for="camera-input"><span aria-hidden="true">＋</span> 카메라로 촬영</label><input class="sr-file" id="camera-input" type="file" accept="image/*" capture="environment"><label class="button secondary library-button" for="library-input">사진 보관함에서 여러 장 선택</label><input class="sr-file" id="library-input" type="file" accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif" multiple></div>
+    <p class="fine-print upload-limits">JPEG · PNG{% if heif_supported %} · HEIC/HEIF{% endif %} / 한 장 최대 20MB / 한 번에 최대 20장·100MB<br>{% if heif_supported %}HEIC/HEIF는 서버에서 웹용 사진으로 변환합니다.{% else %}이 서버에서는 HEIC/HEIF를 변환할 수 없습니다. JPEG 또는 PNG를 선택해 주세요.{% endif %}</p>
+    <div class="section-caption"><h2>선택한 사진 <span id="selected-count">0</span>장</h2><button id="clear-photos" class="text-button" type="button" hidden>선택 비우기</button></div>
+    <div id="upload-empty" class="mobile-empty"><span class="empty-mark" aria-hidden="true">＋</span><strong>아직 선택한 사진이 없습니다</strong><p>사진을 선택하면 여기에서 확인할 수 있습니다.</p></div>
+    <div id="upload-queue" class="upload-queue"></div>
+    <div id="upload-summary" class="upload-summary" role="status" hidden></div>
+    <div class="upload-submit-bar"><button id="upload-submit" class="button primary full" type="submit" disabled>사진을 선택해 주세요</button><button id="retry-failed" class="button secondary full" type="button" hidden>실패한 사진만 다시 시도</button></div>
+  </form>
+  <p class="fine-print">저장한 사진은 PC의 해당 방문에 자동으로 나타납니다. 화면을 닫기 전에 사진별 저장 결과를 확인해 주세요.</p>
+</main>
+{% endblock %}
+{% block scripts %}<script src="{% static 'clinic/upload.js' %}" defer></script>{% endblock %}

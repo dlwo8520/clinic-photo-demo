@@ -1,0 +1,34 @@
+{% extends 'clinic/base.html' %}
+{% load static %}
+{% block title %}{{ patient.name }} · 사진 비교{% endblock %}
+{% block content %}
+<main class="page compare-page" id="compare-app" data-patient-id="{{ patient.id }}">
+  <div class="patient-toolbar"><form class="search-form compact" method="get" action="/patients/" role="search"><label class="sr-only" for="quick-search">다른 환자 검색</label><span class="search-icon" aria-hidden="true">⌕</span><input id="quick-search" name="q" placeholder="이름 또는 차트번호로 환자 찾기"><button type="submit" class="button secondary">검색</button></form><a class="back-link" href="/patients/">환자 목록</a></div>
+  <div class="patient-summary"><div><span class="eyebrow">PHOTO COMPARISON</span><h1>{{ patient.name }} <span class="pill chart-number">{{ patient.chart_number }}</span></h1></div><div class="summary-meta"><span>가상 환자</span><span id="visit-total">방문 {{ visits|length }}회</span><button class="button secondary small" id="new-visit-toggle" type="button" aria-expanded="false" aria-controls="new-visit-form">＋ 새 방문</button></div></div>
+  <form id="new-visit-form" class="new-visit-form" hidden>{% csrf_token %}<div><label for="new-week">주차</label><div class="input-unit"><input id="new-week" type="number" min="1" max="520" value="{% if right_visit %}{{ right_visit.week|add:1 }}{% else %}1{% endif %}" required><span>주차</span></div></div><div><label for="new-date">방문일</label><input id="new-date" type="date" required></div><button type="submit" class="button primary">방문 만들기</button><span class="muted">사진이 없어도 방문을 먼저 만들 수 있습니다.</span><p id="new-visit-error" class="form-error" role="alert"></p></form>
+  <div class="comparison-guide"><span>방문별 사진 비교</span><span class="muted">주차와 방문일을 고르고, 썸네일을 눌러 사진을 바꾸세요.</span></div>
+  <div class="comparison-grid">
+    <section class="comparison-panel" id="left-panel" aria-label="이전 방문">
+      <div class="panel-heading"><h2><span class="panel-number">01</span> 이전 방문</h2><span class="photo-count" id="left-count">사진 0장</span></div>
+      <label class="sr-only" for="left-visit">이전 방문 선택</label><select class="visit-select" id="left-visit"></select>
+      <div class="photo-stage" id="left-stage"><div class="photo-empty"><span class="empty-mark" aria-hidden="true">＋</span><strong>사진 없음</strong><p>선택한 방문에 저장된 사진이 없습니다.</p></div></div>
+      <div class="photo-caption"><span id="left-site" class="site-label">촬영 부위 미입력</span><span id="left-position" class="muted">0 / 0</span></div>
+      <div class="thumbnails" id="left-thumbnails" aria-label="이전 방문 사진 목록"></div>
+      <div class="panel-note">여러 사진을 저장하고 같은 부위를 골라 비교할 수 있습니다.</div>
+    </section>
+    <section class="comparison-panel" id="right-panel" aria-label="비교할 방문">
+      <div class="panel-heading"><h2><span class="panel-number">02</span> 비교할 방문</h2><span class="photo-count" id="right-count">사진 0장</span></div>
+      <label class="sr-only" for="right-visit">비교할 방문 선택</label><select class="visit-select" id="right-visit"></select>
+      <div class="photo-stage" id="right-stage"><div class="photo-empty"><span class="empty-mark" aria-hidden="true">＋</span><strong>사진 없음</strong><p>아이폰에서 이 방문에 사진을 추가해 보세요.</p></div></div>
+      <div class="photo-caption"><span id="right-site" class="site-label">촬영 부위 미입력</span><span id="right-position" class="muted">0 / 0</span></div>
+      <div class="thumbnails" id="right-thumbnails" aria-label="비교할 방문 사진 목록"></div>
+      <div class="upload-toolbar"><div><strong>이 방문에 사진 추가</strong><p id="upload-target" class="muted"></p></div><button class="button primary" id="create-qr" type="button">아이폰으로 사진 추가 <span aria-hidden="true">↗</span></button></div>
+      <div class="panel-note live-note"><span class="live-dot" aria-hidden="true"></span><span id="poll-status" role="status">새 사진을 자동으로 확인합니다 · 2초 간격</span></div>
+    </section>
+  </div>
+  <div id="compare-error" class="notice error" role="alert" hidden></div>
+  <section id="qr-section" class="qr-section" hidden aria-labelledby="qr-title"><div class="qr-image-wrap"><img id="qr-image" width="180" height="180" alt="아이폰 사진 업로드 화면으로 연결하는 QR"></div><div class="qr-details"><div class="eyebrow">IPHONE UPLOAD</div><h2 id="qr-title">아이폰 카메라로 QR을 스캔하세요</h2><p id="qr-target" class="qr-target"></p><p id="qr-expiry" role="status"></p><p class="muted">같은 Wi-Fi에서 접속해 직원 계정으로 로그인하세요.<br>이 QR은 생성 시 선택한 방문에 계속 연결됩니다.</p><a id="upload-open" class="button secondary" target="_blank" rel="noopener">이 브라우저에서 업로드 열기 ↗</a></div><button id="qr-close" class="text-button qr-close" type="button" aria-label="QR 접기">닫기 ×</button></section>
+</main>
+{{ initial_data|json_script:"compare-data" }}
+{% endblock %}
+{% block scripts %}<script src="{% static 'clinic/compare.js' %}" defer></script>{% endblock %}
