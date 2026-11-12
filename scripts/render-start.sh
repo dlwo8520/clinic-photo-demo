@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/render-env.sh"
-# Refuse an ephemeral fallback; create directories only after disk verification.
+# Prepare the configured storage. Free demo uses /tmp with no attached disk.
 python -m config.prepare_runtime
 python manage.py migrate --noinput
 python manage.py check --deploy --fail-level WARNING

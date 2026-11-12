@@ -68,12 +68,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         account_exists = get_user_model().objects.filter(username="dlwo8520").exists()
         configured_password = os.environ.get("CLINIC_DEMO_PASSWORD", "")
-        if not account_exists and not settings.DEBUG and not configured_password:
+        demo_login = settings.DEMO_LOGIN_ENABLED
+        if not account_exists and not demo_login and not settings.DEBUG and not configured_password:
             raise CommandError(
                 "CLINIC_DEMO_PASSWORD must be configured to create a demo account when DJANGO_DEBUG=0. "
                 "Set it in the hosting dashboard; do not commit the password to source control."
             )
-        if not account_exists and not configured_password:
+        if not account_exists and not demo_login and not configured_password:
             configured_password = getpass.getpass("데모 직원 비밀번호: ")
             if not configured_password:
                 raise CommandError("데모 직원 비밀번호를 입력해 주세요.")
@@ -81,11 +82,8 @@ class Command(BaseCommand):
             username="dlwo8520", defaults={"is_staff": True, "first_name": "데모 직원"}
         )
         if created:
-            user.set_password(configured_password)
+            user.set_password(configured_password or None)
             user.save()
-        elif not user.is_staff:
-            user.is_staff = True
-            user.save(update_fields=["is_staff"])
 
         names = ["김하나", "김하나", "이서준", "박민서", "최지우", "정도윤", "강수빈", "윤서아"]
         patients = []
@@ -140,4 +138,4 @@ class Command(BaseCommand):
         self.stdout.write("대표 환자: 1주차 4장 · 2주차 5장 · 3주차 초기 0장")
         self.stdout.write("데모 계정: dlwo8520 / 기존 계정의 비밀번호는 유지됩니다.")
         if created:
-            self.stdout.write("입력한 비밀번호로 계정을 만들었습니다. 값은 출력하지 않습니다.")
+            self.stdout.write("데모 계정을 준비했습니다. 비밀번호 값은 출력하지 않습니다.")

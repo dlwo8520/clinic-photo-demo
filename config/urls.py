@@ -1,9 +1,9 @@
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LogoutView
 from django.urls import include, path
-from clinic.forms import StaffAuthenticationForm
+from clinic.auth import ClinicLoginView
 
 urlpatterns = [
-    path("login/", LoginView.as_view(authentication_form=StaffAuthenticationForm, template_name="registration/login.html"), name="login"),
+    path("login/", ClinicLoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("", include("clinic.urls")),
 ]

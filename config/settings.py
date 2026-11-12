@@ -1,4 +1,5 @@
 import os
+import hashlib
 import secrets
 import ipaddress
 from pathlib import Path
@@ -21,8 +22,11 @@ if not SECRET_KEY:
     except FileExistsError:
         pass
     SECRET_KEY = secret_path.read_text(encoding="utf-8")
-if not DEBUG and (len(SECRET_KEY) < 50 or len(set(SECRET_KEY)) < 5 or SECRET_KEY.startswith("django-insecure-")):
-    raise ImproperlyConfigured("Production DJANGO_SECRET_KEY must be a random secret of at least 50 characters")
+if not DEBUG:
+    if len(SECRET_KEY) < 32 or len(set(SECRET_KEY)) < 5 or SECRET_KEY.startswith("django-insecure-"):
+        raise ImproperlyConfigured("Production DJANGO_SECRET_KEY must be a random secret of at least 32 characters")
+    if len(SECRET_KEY) < 50:
+        SECRET_KEY = hashlib.sha512(SECRET_KEY.encode()).hexdigest()
 default_hosts = "localhost,127.0.0.1,[::1]" if DEBUG else os.environ.get("RENDER_EXTERNAL_HOSTNAME", "")
 ALLOWED_HOSTS = [h.strip().lower() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", default_hosts).split(",") if h.strip()]
 QR_BASE_URL = os.environ.get("QR_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
@@ -43,8 +47,12 @@ if not DEBUG:
     if host not in ALLOWED_HOSTS:
         raise ImproperlyConfigured("QR_BASE_URL hostname must be in DJANGO_ALLOWED_HOSTS")
 data_value = os.environ.get("CLINIC_DATA_DIR", "")
+STORAGE_MODE = os.environ.get("CLINIC_STORAGE_MODE", "persistent" if ON_RENDER else "local")
+if STORAGE_MODE not in {"local", "ephemeral", "persistent"}:
+    raise ImproperlyConfigured("CLINIC_STORAGE_MODE must be local, ephemeral or persistent")
+DEMO_LOGIN_ENABLED = os.environ.get("CLINIC_DEMO_LOGIN", "0").lower() in {"1", "true", "yes"}
 if not DEBUG and (not data_value or not Path(data_value).is_absolute()):
-    raise ImproperlyConfigured("Production CLINIC_DATA_DIR must be an absolute persistent-disk directory")
+    raise ImproperlyConfigured("Production CLINIC_DATA_DIR must be an absolute directory")
 DATA_DIR = Path(data_value).resolve() if data_value else BASE_DIR
 UPLOAD_SESSION_MINUTES = 10
 INSTALLED_APPS = [
@@ -81,7 +89,7 @@ STORAGES = {"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"
 PRIVATE_MEDIA_ROOT = DATA_DIR / "private_media"
 # Multipart request scratch files use the OS private temp directory and Django
 # removes them when the request closes. Accepted originals/display/thumbs all
-# live under PRIVATE_MEDIA_ROOT on the persistent disk. No import-time writes.
+# live under PRIVATE_MEDIA_ROOT. Free demo storage is ephemeral. No import-time writes.
 FILE_UPLOAD_TEMP_DIR = None
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024

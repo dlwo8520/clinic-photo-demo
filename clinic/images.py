@@ -53,6 +53,10 @@ def process_image(uploaded_file):
                 w, h = source.size
                 if min(w, h) < MIN_SIDE or max(w, h) > MAX_SIDE or w * h > MAX_PIXELS:
                     raise ImageValidationError("해상도는 가로·세로 64px 이상, 각 변 12,000px 이하, 총 4천만 화소 이하여야 합니다.")
+                # Preserve original bytes, but bound display buffers for the 512MB demo.
+                # JPEG draft decoding also avoids decoding the full camera resolution.
+                source.draft("RGB", (2400, 2400))
+                source.thumbnail((2400, 2400), Image.Resampling.LANCZOS)
                 source.load()  # Decode fully before accepting (not just file suffix or header).
                 oriented = ImageOps.exif_transpose(source)
                 # A fresh RGB canvas strips EXIF/GPS, XMP, comments and other metadata.

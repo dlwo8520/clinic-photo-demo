@@ -16,7 +16,7 @@
   </header>
   {% if messages %}<div class="messages" role="status">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
   {% block content %}{% endblock %}
-  <footer class="app-footer">가상의 환자와 시연용 사진을 사용합니다. 실제 진료 자료가 아닙니다.</footer>
+  <footer class="app-footer">가상의 환자와 시연용 사진을 사용합니다. 실제 진료 자료가 아닙니다.<br>무료 면접 데모: 새로고침 시 사진은 유지되며, 서버 재시작·재배포·절전 후에는 기본 샘플로 돌아갈 수 있습니다.</footer>
   {% block scripts %}{% endblock %}
 </body>
 </html>

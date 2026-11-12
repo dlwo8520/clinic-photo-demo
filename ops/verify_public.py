@@ -82,6 +82,7 @@ class ClinicHTML(html.parser.HTMLParser):
         super().__init__(convert_charrefs=True)
         self.csrf = None
         self.has_password = False
+        self.has_demo = False
         self.rows = []
         self.compare_json = ""
         self._row = None
@@ -90,6 +91,8 @@ class ClinicHTML(html.parser.HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        if tag == "button" and attrs.get("name") == "demo" and attrs.get("value") == "staff":
+            self.has_demo = True
         if tag == "input":
             if attrs.get("name") == "csrfmiddlewaretoken":
                 self.csrf = attrs.get("value")
@@ -193,16 +196,21 @@ class Client:
         except (ValueError, UnicodeDecodeError) as exc:
             raise VerificationError("API returned invalid JSON; check authentication and server logs.") from exc
 
-    def login(self, username, password):
+    def login(self, username, password=None):
         page, _ = self.html("/login/?next=/patients/")
         require(page.csrf, "Login form did not contain a CSRF token.")
-        payload = urllib.parse.urlencode({"username": username, "password": password,
-                                         "csrfmiddlewaretoken": page.csrf,
-                                         "next": "/patients/"}).encode("utf-8")
+        fields = {"csrfmiddlewaretoken": page.csrf, "next": "/patients/"}
+        if page.has_demo:
+            fields["demo"] = "staff"
+        else:
+            password = password or getpass.getpass("Demo staff password: ")
+            require(password, "A password is required.")
+            fields.update(username=username, password=password)
+        payload = urllib.parse.urlencode(fields).encode("utf-8")
         status, body, _ = self.request("/login/", method="POST", body=payload,
                                        content_type="application/x-www-form-urlencoded")
-        require(status == 200 and not parse_html(body).has_password,
-                "Staff login failed. Check the username and password.")
+        require(status == 200 and not parse_html(body).has_password and not parse_html(body).has_demo,
+                "Staff login failed. Check the demo account and authentication mode.")
 
 
 def image_bytes(index):
@@ -400,11 +408,13 @@ def arguments():
     parser.add_argument("--patient-chart", default="DEMO-1001")
     parser.add_argument("--namesake-query", default="김하")
     parser.add_argument("--upload", action="store_true", help="Explicitly add fictional photos (3 then 1) to the representative week-3 visit")
-    parser.add_argument("--check-restart", type=Path, metavar="EVIDENCE_JSON", help="After an operator restart, verify previously recorded photo IDs and hashes")
+    parser.add_argument("--check-restart", type=Path, metavar="EVIDENCE_JSON", help="Verify stored IDs/hashes in the same active instance (not a Free instance restart)")
+    parser.add_argument("--check-reset", action="store_true", help="After a Free instance replacement, verify week 1=4, week 2=5, week 3=0")
     parser.add_argument("--output", type=Path, default=Path("artifacts/public-verification.json"))
     parser.add_argument("--allow-local", action="store_true", help="Allow HTTP only on localhost/127.0.0.1/::1 for local QA")
     args = parser.parse_args()
     require(not (args.upload and args.check_restart), "Use --upload and --check-restart as separate runs.")
+    require(not (args.check_reset and (args.upload or args.check_restart)), "Use --check-reset separately.")
     args.base_url = validate_base_url(args.base_url, args.allow_local)
     return args
 
@@ -412,8 +422,7 @@ def arguments():
 def main():
     try:
         args = arguments()
-        password = os.environ.get("CLINIC_DEMO_PASSWORD") or getpass.getpass("Demo staff password: ")
-        require(password, "A password is required.")
+        password = os.environ.get("CLINIC_DEMO_PASSWORD")
         client = Client(args.base_url)
         client.login(args.username, password)
         del password
@@ -423,6 +432,10 @@ def main():
             evidence["restart_verification"] = restart_check(client, previous)
         else:
             patient, selected = check_initial(client, args)
+            if args.check_reset:
+                for week, expected in ((1, 4), (2, 5), (3, 0)):
+                    require(len(photo_list(client, selected[week]["id"])) == expected,
+                            f"Free demo week {week} did not reset to {expected} sample photos.")
             original_visits = [visit_snapshot(client, selected[week]) for week in (1, 2)]
             upload = check_upload(client, selected) if args.upload else {"performed": False}
             if args.upload:
@@ -438,11 +451,12 @@ def main():
                                    "authenticated_photo_and_thumbnail": True,
                                    "anonymous_photo_and_thumbnail_blocked": True},
                         "upload": upload,
+                        "free_sample_reset_verified": args.check_reset,
                         "visits": original_visits + [visit_snapshot(client, selected[3])],
                         "manual_checks_required": [
                             "PC browser: select week 3, upload from another session, confirm thumbnails/count and last large photo update without page reload.",
                             "iPhone Safari: scan QR, log in and return to this visit, test camera and multiple library selection, preview/removal and partial retry.",
-                            "Operator: restart or redeploy the server, then run --check-restart against this evidence file.",
+                            "Same active server: use --check-restart to re-fetch stored hashes; after Free instance replacement use --check-reset for baseline samples.",
                         ]}
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
