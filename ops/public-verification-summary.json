@@ -1,33 +1,41 @@
 {
   "verified_on": "2026-11-12",
   "timezone": "Asia/Seoul",
+  "app_name": "굿모나 의원",
   "public_url": "https://clinic-photo-demo.onrender.com",
+  "service_id": "srv-dbqpp5hsrm7s73dkd110",
   "service_plan": "free",
   "persistent_disk": false,
-  "source_commit": "fb6168cc05f6e3150551338d09a3e40fc8e078f0",
-  "automated_tests_passed": 52,
+  "source_commit": "5829163fc063959acb22a1a5059be3901ba26def",
+  "deployment_id": "dep-dbqpv91srm7s73dksc2g",
+  "deployment_status": "live",
+  "automated_tests_passed": 56,
   "public_https": {
-    "staff_button_login": true,
+    "branding": true,
+    "staff_account_login": true,
     "csrf": true,
     "patient_search": true,
     "namesake_chart_distinction": true,
     "qr_origin_and_visit": true,
-    "week3_upload_counts": [0, 3, 4],
+    "week3_upload_counts": [
+      0,
+      3,
+      4
+    ],
     "duplicate_retry_blocked": true,
     "week1_and_week2_unchanged": true,
-    "same_instance_photo_ids_and_image_hashes_unchanged": true,
+    "same_run_photo_ids_and_image_hashes_unchanged": true,
     "anonymous_photo_access_blocked": true
   },
   "linux_heic_conversion": "verified_in_render_startup",
-  "redeploy": {
-    "deployment_id": "dep-dbqpqu9srm7s73dkh9rg",
-    "status": "live",
+  "restart": {
+    "operation": "Render CLI restart",
     "sample_reset_verified": true,
     "week1_count": 4,
     "week2_count": 5,
     "week3_count": 0
   },
-  "manual_pc_live_refresh": "awaiting_user_confirmation",
-  "manual_iphone_safari": "awaiting_user_confirmation",
-  "limitations": "HTTP checks do not replace actual PC JavaScript execution or iPhone Safari use. Uploads are temporary and reset when the Free instance is replaced."
+  "manual_pc_live_refresh": "not_verified",
+  "manual_iphone_safari": "not_verified",
+  "limitations": "HTTP checks verify server behavior and do not execute browser JavaScript or operate a physical iPhone. Free service restarts and idle spin-down discard temporary uploads."
 }
